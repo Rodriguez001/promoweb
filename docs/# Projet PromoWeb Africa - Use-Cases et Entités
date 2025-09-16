@@ -1,0 +1,131 @@
+# Projet PromoWeb Africa - Use-Cases et Entités
+
+## **1. Les Use-Cases**
+
+Un **use-case** correspond à une interaction spécifique entre un utilisateur ou un groupe d'utilisateurs et le système. Voici la liste des principaux **use-cases** identifiés pour PromoWeb Africa :
+
+---
+
+### **A. Use-cases côté utilisateur (Front-office)**
+
+1. **Parcourir le catalogue produit**
+   - L'utilisateur consulte les catégories de produits disponibles (parapharmacie, beauté, livres, etc.).
+   - Peut appliquer des filtres par catégorie, prix, marque ou ISBN/EAN.
+   - Se renseigne sur les détails d’un produit (image HD, description, prix en XAF, disponibilité).
+
+2. **Effectuer une recherche intelligente**
+   - L'utilisateur utilise un moteur de recherche pour trouver un produit spécifique par :
+     - Titre.
+     - Auteur.
+     - ISBN (pour les livres) ou EAN (pour d’autres produits).
+   - Recherche optimisée via **Algolia Search** (ou équivalent local).
+
+3. **Ajouter un ou plusieurs produits au panier**
+   - Ajout des produits au panier.
+   - Calcul automatique des coûts (prix, remises).
+   - Acompte calculé dynamiquement pour les paiements flexibles.
+   - Visualisation du panier (produits, quantités, prix total).
+
+4. **Finaliser une commande avec paiement**
+   - L'utilisateur remplit les informations de commande (adresse, téléphone, mode de livraison).
+   - Sélectionne un mode de paiement :
+     - Paiement partiel via acompte (Mobile Money, carte bancaire, etc.).
+     - Paiement total.
+   - Reçoit une notification (email ou SMS) de confirmation.
+
+5. **Suivre sa commande**
+   - Accède à un espace utilisateur pour voir :
+     - L’état d’une commande (en traitement, en transit, livré).
+     - Les détails de paiement (acompte versé, solde restant à payer).
+   - Suivi de la livraison grâce à une **API de suivi colis**.
+
+6. **Gérer son compte utilisateur**
+   - Inscription et connexion au compte :
+     - Email/mot de passe ou authentification par numéro de téléphone.
+   - Mise à jour des informations personnelles (adresse, téléphone).
+   - Historique des commandes.
+
+7. **Contacter le support client**
+   - Formulaire ou messagerie directe pour poser des questions sur la commande.
+   - Notifications en temps réel pour les réponses du service client.
+
+---
+
+### **B. Use-cases côté administrateur/back-office**
+
+1. **Gestion des produits**
+   - Ajouter des produits manuellement (produits hors flux automatisé, éditions limitées).
+   - Synchroniser le catalogue via API (Google Merchant, import CSV).
+   - Gérer les promotions (prix barrés, remises automatiques).
+
+2. **Gestion des commandes**
+   - Visualisation et suivi des commandes :
+     - Paiements reçus (acompte ou complet).
+     - Statut des livraisons (préparé, expédié, livré).
+   - Modification manuelle d'une commande en cas de changement (adresse, produit, etc.).
+
+3. **Gestion des paiements**
+   - Suivi des paiements via Mobile Money ou carte bancaire :
+     - Vérifier les acomptes/payments restants dans chaque commande.
+   - Générer des rapports financiers (recettes/jour, mois, produit).
+
+4. **Gestion des livraisons**
+   - Calcul automatique des frais en fonction du poids, du volume et de la distance.
+   - Suivre les colis en transit via l’API logistique (DHL, Aftership, ou autre).
+   - Exporter des rapports de livraison pour analyse (temps moyen de livraison, retards, etc.).
+
+5. **Analyse des performances**
+   - Consultation de données dans un **tableau de bord dynamique** :
+     - Chiffre d'affaires quotidien, mensuel.
+     - Produits les plus vendus.
+     - Clients réguliers.
+     - Délai moyen entre commande, expédition et livraison.
+
+6. **Gestion des utilisateurs**
+   - Valider ou bannir des utilisateurs si nécessaire (fraude, comportement abusif).
+   - Consulter les historiques d’activités (commandes, paiements).
+
+---
+
+## **2. Les Entités du Projet**
+
+Les **entités** représentent les modèles de données critiques dans le système.
+
+### **Entités principales côté utilisateur (Customer-Facing)**
+
+1. **Utilisateur (User)**
+   - Attributs : ID_User, Email, Password, Name, Phone, Default_Address.
+
+2. **Produit (Product)**
+   - Attributs : ID_Product, Name, Price_XAF, Stock_Quantity, Category, Description.
+
+3. **Commande (Order)**
+   - Attributs : ID_Order, Order_Date, Total_Price, Status.
+
+4. **Panier (Cart)**
+   - Attributs : ID_Cart, Session_User, Produits_Inclus.
+
+5. **Paiement (Payment)**
+   - Attributs : ID_Payment, Payment_Type, Amount, Status.
+
+---
+
+### **Entités backend (Administrative)**
+
+1. **Admin (AdminUser)**
+   - Attributs : ID_Admin, Email, Password.
+
+2. **Catalogue produit (ProductCatalog)**
+   - Attributs : Flux_Source, Last_Sync_Date.
+
+3. **Logistique/Livraison (Shipment)**
+   - Attributs : ID_Shipment, Shipment_Status, Tracking_Number.
+
+---
+
+## **3. Relations :**
+Voir le diagramme UML ci-dessus ou directement dans le modèle de base de données relationnelle.
+
+---
+
+Terminez d’ajouter ici les requêtes SQL que vous souhaitez tester directement dans votre environnement !
