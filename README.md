@@ -1,25 +1,82 @@
-# PromoWeb Africa - E-commerce Platform
+# 🛍️ PromoWeb Africa - E-commerce Platform
 
-Plateforme e-commerce innovante spécialisée dans les produits européens de parapharmacie, beauté, bien-être, et livres à destination des consommateurs camerounais.
+**Plateforme e-commerce premium** spécialisée dans les produits européens de parapharmacie, beauté, bien-être, et livres à destination des consommateurs camerounais.
 
-## 🚀 Technologies
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd promoweb
+
+# Setup development environment
+chmod +x setup-dev.sh
+./setup-dev.sh
+
+# Start the application
+docker-compose up
+```
+
+**Access the application:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
+- Admin Panel: http://localhost:5050
+
+## Fonctionnalités Principales
+
+### E-commerce Complet
+- **Catalogue produits** avec synchronisation Google Merchant Center
+- **Système d'acompte** (30% minimum) avec paiement échelonné
+- **Livraison géolocalisée** avec calcul automatique des frais
+- **Multi-devises** (EUR/XAF) avec taux de change en temps réel
+
+### Paiements Intégrés
+- **Mobile Money**: Orange Money & MTN Mobile Money
+- **Cartes bancaires**: Stripe (Visa, Mastercard)
+- **Paiement à la livraison** pour certaines zones
+
+### Expérience Utilisateur
+- **Interface responsive** optimisée mobile-first
+- **Recherche avancée** avec filtres intelligents
+- **Panier persistant** multi-sessions
+- **Suivi commandes** en temps réel
+
+### Analytics & Admin
+- **Dashboard administrateur** complet
+- **Analytics e-commerce** détaillées
+- **Gestion des stocks** automatisée
+- **Rapports de vente** exportables
+
+## Technologies
 
 ### Frontend
-- **Next.js 14** avec App Router
-- **React 18** avec TypeScript
-- **Tailwind CSS** pour le design moderne et responsive
-- **PWA** pour une expérience native
-- **Algolia Search** pour la recherche intelligente
+- **Next.js 14** - Framework React avec App Router
+- **TypeScript** - Typage statique
+- **Tailwind CSS** - Framework CSS utilitaire
+- **Radix UI** - Composants accessibles
+- **React Hook Form** - Gestion des formulaires
+- **Zustand** - État global léger
 
 ### Backend
-- **NestJS** avec TypeScript
-- **PostgreSQL** pour la base de données
-- **Prisma ORM** pour la gestion des données
-- **Redis** pour le cache et les sessions
+- **FastAPI** - Framework Python moderne et rapide
+- **SQLAlchemy 2.0** - ORM avec support async
+- **PostgreSQL + PostGIS** - Base géospatiale
+- **Redis** - Cache haute performance
+- **Alembic** - Migrations de base de données
+- **Celery** - Tâches asynchrones
 
-### Paiements
-- **Mobile Money** (Orange Money, MTN Mobile Money)
-- **Cartes bancaires** via RHOPEN Labs API
+### Infrastructure
+- **Docker & Docker Compose** - Conteneurisation
+- **Nginx** - Proxy inverse et load balancer
+- **pgAdmin** - Interface d'administration PostgreSQL
+- **Monitoring** - Logs structurés et métriques
 - **Système d'acompte** configurable
 
 ### Livraison

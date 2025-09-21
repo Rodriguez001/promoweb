@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors ligne - PromoWeb Africa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            opacity: 0.9;
+        }
+
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .features h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .features ul {
+            list-style: none;
+        }
+
+        .features li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .button.primary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+        }
+
+        .button.primary:hover {
+            background: white;
+        }
+
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .online {
+            color: #4ade80;
+        }
+
+        .offline {
+            color: #f87171;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .checking {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .icon {
+                font-size: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📶</div>
+        <h1>Vous êtes hors ligne</h1>
+        <p>
+            Oups ! Il semble que votre connexion internet soit indisponible. 
+            Mais ne vous inquiétez pas, PromoWeb Africa fonctionne même hors ligne !
+        </p>
+
+        <div class="features">
+            <h3>🚀 Fonctionnalités disponibles hors ligne :</h3>
+            <ul>
+                <li>Parcourir les produits mis en cache</li>
+                <li>Consulter votre panier</li>
+                <li>Voir vos commandes précédentes</li>
+                <li>Ajouter des produits à votre wishlist</li>
+                <li>Lire les informations produits</li>
+            </ul>
+        </div>
+
+        <div class="status">
+            <span id="status" class="offline">● Hors ligne</span>
+            <span id="checking" style="display: none;">🔄 Vérification...</span>
+        </div>
+
+        <div>
+            <button class="button primary" onclick="checkConnection()">
+                🔄 Vérifier la connexion
+            </button>
+            <a href="/" class="button">
+                🏠 Accueil
+            </a>
+            <a href="/products" class="button">
+                🛍️ Catalogue
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let isOnline = navigator.onLine;
+        let checkingInterval;
+
+        function updateStatus(online) {
+            const statusEl = document.getElementById('status');
+            const checkingEl = document.getElementById('checking');
+            
+            if (online) {
+                statusEl.textContent = '● En ligne';
+                statusEl.className = 'online';
+                checkingEl.style.display = 'none';
+                
+                // Redirect to home page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                statusEl.textContent = '● Hors ligne';
+                statusEl.className = 'offline';
+            }
+        }
+
+        function checkConnection() {
+            const statusEl = document.getElementById('status');
+            const checkingEl = document.getElementById('checking');
+            
+            statusEl.style.display = 'none';
+            checkingEl.style.display = 'inline';
+            checkingEl.className = 'checking';
+            
+            // Try to fetch a simple resource
+            fetch('/manifest.json', { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            })
+            .then(response => {
+                if (response.ok) {
+                    updateStatus(true);
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .catch(() => {
+                setTimeout(() => {
+                    statusEl.style.display = 'inline';
+                    checkingEl.style.display = 'none';
+                    updateStatus(false);
+                }, 1000);
+            });
+        }
+
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            updateStatus(true);
+        });
+
+        window.addEventListener('offline', () => {
+            updateStatus(false);
+        });
+
+        // Check connection every 30 seconds
+        setInterval(() => {
+            if (!navigator.onLine) {
+                checkConnection();
+            }
+        }, 30000);
+
+        // Initial status
+        updateStatus(navigator.onLine);
+    </script>
+</body>
+</html>

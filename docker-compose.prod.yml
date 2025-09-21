@@ -1,0 +1,215 @@
+# Production overrides for PromoWeb Africa
+version: '3.8'
+
+services:
+  # Production PostgreSQL with optimizations
+  postgres:
+    environment:
+      - POSTGRES_DB=${DB_NAME:-promoweb}
+      - POSTGRES_USER=${DB_USER:-promoweb}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+      - ./backups:/backups
+    restart: always
+    command: >
+      postgres 
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.7
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+
+  # Production Redis with persistence
+  redis:
+    restart: always
+    command: >
+      redis-server 
+      --appendonly yes 
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+
+  # Remove pgAdmin from production
+  pgadmin:
+    profiles:
+      - debug
+
+  # Production Backend with Gunicorn
+  backend:
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-promoweb}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-promoweb}
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://promoweb.africa}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - ORANGE_MONEY_API_KEY=${ORANGE_MONEY_API_KEY}
+      - MTN_MONEY_API_KEY=${MTN_MONEY_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - AFRICASTALKING_USERNAME=${AFRICASTALKING_USERNAME}
+      - AFRICASTALKING_API_KEY=${AFRICASTALKING_API_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    restart: always
+    command: >
+      gunicorn app.main:app 
+      -w 4 
+      -k uvicorn.workers.UvicornWorker 
+      --bind 0.0.0.0:8000
+      --max-requests 1000
+      --max-requests-jitter 100
+      --timeout 30
+      --keep-alive 2
+      --log-level info
+      --access-logfile -
+      --error-logfile -
+    volumes:
+      - backend_uploads:/app/uploads
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production Frontend with optimizations
+  frontend:
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.promoweb.africa}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://promoweb.africa}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
+      - NEXT_PUBLIC_GA_TRACKING_ID=${NEXT_PUBLIC_GA_TRACKING_ID}
+    restart: always
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production Celery Worker
+  celery_worker:
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-promoweb}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-promoweb}
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    restart: always
+    command: >
+      celery -A app.core.celery worker 
+      --loglevel=info
+      --concurrency=4
+      --max-tasks-per-child=1000
+      --time-limit=300
+      --soft-time-limit=240
+
+  # Production Celery Beat
+  celery_beat:
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-promoweb}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-promoweb}
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=production
+      - SECRET_KEY=${SECRET_KEY}
+    restart: always
+    command: >
+      celery -A app.core.celery beat 
+      --loglevel=info
+      --pidfile=/tmp/celerybeat.pid
+
+  # Nginx reverse proxy (production only)
+  nginx:
+    image: nginx:alpine
+    container_name: promoweb_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+      - backend_uploads:/var/www/uploads:ro
+    networks:
+      - promoweb_network
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Log aggregation with Loki (optional)
+  loki:
+    image: grafana/loki:latest
+    container_name: promoweb_loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./loki/loki.yml:/etc/loki/local-config.yaml:ro
+    networks:
+      - promoweb_network
+    restart: always
+    profiles:
+      - monitoring
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: promoweb_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - promoweb_network
+    restart: always
+    profiles:
+      - monitoring
+
+  # Grafana for dashboards (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: promoweb_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - promoweb_network
+    restart: always
+    profiles:
+      - monitoring
+
+volumes:
+  loki_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

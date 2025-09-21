@@ -8,8 +8,8 @@ from typing import AsyncGenerator, Dict, Any
 from contextlib import asynccontextmanager
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -48,7 +48,7 @@ sync_engine = create_engine(
 )
 
 # Session factories
-AsyncSessionLocal = async_sessionmaker(
+AsyncSessionLocal = sessionmaker(
     bind=async_engine,
     class_=AsyncSession,
     expire_on_commit=False,

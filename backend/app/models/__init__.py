@@ -18,7 +18,7 @@ from app.models.order import (
 )
 from app.models.payment import (
     Payment, PaymentRefund, PaymentWebhook, 
-    PaymentMethod, PaymentTransaction
+    PaymentMethod, PaymentTransaction, ExchangeRate
 )
 from app.models.shipping import (
     Shipping, ShippingTrackingEvent, ShippingZone, 
@@ -49,7 +49,7 @@ __all__ = [
     
     # Payment models
     "Payment", "PaymentRefund", "PaymentWebhook", 
-    "PaymentMethod", "PaymentTransaction",
+    "PaymentMethod", "PaymentTransaction", "ExchangeRate",
     
     # Shipping models
     "Shipping", "ShippingTrackingEvent", "ShippingZone", 

@@ -377,3 +377,33 @@ class PaymentTransaction(Base):
     
     def __repr__(self):
         return f"<PaymentTransaction(id={self.id}, type='{self.transaction_type}', amount={self.amount})>"
+
+
+class ExchangeRate(Base):
+    """Exchange rate model for currency conversions."""
+    
+    __tablename__ = "exchange_rates"
+    
+    # Primary key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Currency pair
+    from_currency = Column(String(3), nullable=False)  # EUR
+    to_currency = Column(String(3), nullable=False)    # XAF
+    
+    # Rate information
+    rate = Column(Numeric(precision=12, scale=6), nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False, index=True)
+    source = Column(String(50), nullable=False)  # api, manual, etc.
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Index for efficient queries
+    __table_args__ = (
+        Index('idx_exchange_rate_currencies_date', 'from_currency', 'to_currency', 'date'),
+    )
+    
+    def __repr__(self):
+        return f"<ExchangeRate({self.from_currency}->{self.to_currency}: {self.rate})>"

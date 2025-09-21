@@ -3,11 +3,14 @@ Payment endpoints for PromoWeb Africa.
 Handles payment processing, webhooks, and refunds.
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func
 from sqlalchemy.orm import selectinload
+from decimal import Decimal
+import json
+import logging
 
 from app.api.dependencies import (
     get_current_user, get_current_admin_user, get_pagination_params,
@@ -15,14 +18,17 @@ from app.api.dependencies import (
 )
 from app.models.payment import Payment, PaymentRefund, PaymentWebhook, PaymentMethod
 from app.models.order import Order
-from app.schemas.order import (
-    PaymentResponse, PaymentCreate, PaymentIntent, PaymentRefundCreate,
-    PaymentRefundResponse, PaymentGateway, PaymentStatus
+from app.schemas.payment import (
+    PaymentResponse, PaymentCreateRequest, PaymentIntentResponse, 
+    PaymentRefundCreate, PaymentRefundResponse, PaymentStatusResponse,
+    PartialPaymentCalculation
 )
 from app.schemas.common import BaseResponse, PaginatedResponse
 from app.core.database import get_db_context
-from decimal import Decimal
-import logging
+from app.services.payment import (
+    payment_service, PaymentRequest, PaymentGateway, PaymentStatus,
+    process_payment, calculate_partial_payment, create_refund
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +57,406 @@ async def get_user_payments(
             if order_id:
                 query = query.where(Payment.order_id == order_id)
             
-            payments = await db.execute(
-                query.options(selectinload(Payment.refunds))
+            result = await db.execute(
+                query.options(selectinload(Payment.order))
                 .order_by(Payment.created_at.desc())
             )
+            payments = result.scalars().all()
             
-            return payments.scalars().all()
+            return [PaymentResponse.from_orm(payment) for payment in payments]
             
     except Exception as e:
         logger.error(f"Failed to get user payments: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve payments"
+        )
+
+
+@router.post("/create", response_model=PaymentIntentResponse, status_code=status.HTTP_201_CREATED)
+async def create_payment(
+    payment_request: PaymentCreateRequest,
+    current_user: object = Depends(get_current_user)
+):
+    """
+    Create a payment for an order.
+    
+    - **order_id**: Order to pay for
+    - **gateway**: Payment gateway to use
+    - **is_partial**: Whether this is a partial payment (30% down payment)
+    """
+    try:
+        async with get_db_context() as db:
+            # Verify order exists and belongs to user
+            order = await db.execute(
+                select(Order)
+                .where(Order.id == payment_request.order_id, Order.user_id == current_user.id)
+            )
+            order = order.scalar_one_or_none()
+            
+            if not order:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Order not found"
+                )
+            
+            # Check if order can be paid
+            if order.status in ['cancelled', 'refunded']:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot pay for cancelled or refunded order"
+                )
+            
+            # Calculate payment amount
+            if payment_request.is_partial:
+                partial_calc = await calculate_partial_payment(order.total_amount)
+                payment_amount = partial_calc['down_payment']
+            else:
+                payment_amount = order.total_amount
+            
+            # Create payment request
+            pay_request = PaymentRequest(
+                order_id=str(order.id),
+                amount=payment_amount,
+                currency="XAF",
+                gateway=PaymentGateway(payment_request.gateway),
+                customer_email=current_user.email,
+                customer_phone=current_user.phone,
+                is_partial=payment_request.is_partial,
+                metadata={
+                    "user_id": str(current_user.id),
+                    "order_number": order.order_number
+                }
+            )
+            
+            # Process payment
+            result = await process_payment(pay_request)
+            
+            if not result.success:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=result.error_message or "Payment processing failed"
+                )
+            
+            return PaymentIntentResponse(
+                payment_id=result.payment_id,
+                status=result.status.value,
+                gateway=payment_request.gateway,
+                amount=payment_amount,
+                currency="XAF",
+                gateway_response=result.gateway_response,
+                requires_action=result.requires_action,
+                redirect_url=result.redirect_url
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Payment creation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Payment creation failed"
+        )
+
+
+@router.get("/calculate-partial/{order_id}", response_model=PartialPaymentCalculation)
+async def calculate_partial_payment_endpoint(
+    order_id: str,
+    current_user: object = Depends(get_current_user)
+):
+    """
+    Calculate partial payment amounts for an order.
+    
+    Returns 30% down payment and remaining balance.
+    """
+    try:
+        async with get_db_context() as db:
+            order = await db.execute(
+                select(Order)
+                .where(Order.id == order_id, Order.user_id == current_user.id)
+            )
+            order = order.scalar_one_or_none()
+            
+            if not order:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Order not found"
+                )
+            
+            calculation = await calculate_partial_payment(order.total_amount)
+            
+            return PartialPaymentCalculation(
+                order_id=order_id,
+                total_amount=order.total_amount,
+                down_payment=calculation['down_payment'],
+                remaining_balance=calculation['remaining_balance'],
+                down_payment_percentage=calculation['down_payment_percentage']
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to calculate partial payment: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to calculate partial payment"
+        )
+
+
+@router.get("/status/{payment_id}", response_model=PaymentStatusResponse)
+async def get_payment_status(
+    payment_id: str,
+    current_user: object = Depends(get_current_user)
+):
+    """
+    Get payment status.
+    """
+    try:
+        async with get_db_context() as db:
+            payment = await db.execute(
+                select(Payment)
+                .join(Order)
+                .where(
+                    Payment.id == payment_id,
+                    Order.user_id == current_user.id
+                )
+                .options(selectinload(Payment.order))
+            )
+            payment = payment.scalar_one_or_none()
+            
+            if not payment:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Payment not found"
+                )
+            
+            return PaymentStatusResponse(
+                payment_id=str(payment.id),
+                status=payment.status,
+                gateway=payment.gateway,
+                amount=payment.amount,
+                currency=payment.currency,
+                transaction_id=payment.transaction_id,
+                created_at=payment.created_at,
+                completed_at=payment.completed_at,
+                failure_reason=payment.failure_reason
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get payment status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve payment status"
+        )
+
+
+# Webhook endpoints
+@router.post("/webhooks/stripe")
+async def stripe_webhook(
+    request: Request,
+    stripe_signature: str = Header(None, alias="stripe-signature")
+):
+    """
+    Handle Stripe webhooks.
+    """
+    try:
+        payload = await request.body()
+        
+        result = await payment_service.stripe_processor.handle_webhook(
+            payload, stripe_signature
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Webhook processing failed"
+        )
+
+
+@router.post("/webhooks/orange-money")
+async def orange_money_webhook(request: Request):
+    """
+    Handle Orange Money webhooks.
+    """
+    try:
+        payload = await request.json()
+        
+        # Process Orange Money webhook
+        transaction_id = payload.get('transaction_id')
+        status = payload.get('status')
+        
+        if transaction_id and status:
+            async with get_db_context() as db:
+                # Find payment by gateway payment ID
+                result = await db.execute(
+                    select(Payment).where(Payment.gateway_payment_id == transaction_id)
+                )
+                payment = result.scalar_one_or_none()
+                
+                if payment:
+                    # Update payment status
+                    new_status = PaymentStatus.SUCCESS if status == 'success' else PaymentStatus.FAILED
+                    await db.execute(
+                        update(Payment)
+                        .where(Payment.id == payment.id)
+                        .values(
+                            status=new_status,
+                            gateway_response=payload,
+                            completed_at=datetime.utcnow() if new_status == PaymentStatus.SUCCESS else None,
+                            failure_reason=payload.get('error_message') if new_status == PaymentStatus.FAILED else None
+                        )
+                    )
+                    await db.commit()
+                    
+                    logger.info(f"Orange Money payment updated: {payment.id} -> {new_status}")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"Orange Money webhook error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Webhook processing failed"
+        )
+
+
+@router.post("/webhooks/mtn-money")
+async def mtn_money_webhook(request: Request):
+    """
+    Handle MTN Mobile Money webhooks.
+    """
+    try:
+        payload = await request.json()
+        
+        # Process MTN Mobile Money webhook
+        reference_id = payload.get('referenceId')
+        status = payload.get('status')
+        
+        if reference_id and status:
+            async with get_db_context() as db:
+                # Find payment by gateway payment ID
+                result = await db.execute(
+                    select(Payment).where(Payment.gateway_payment_id == reference_id)
+                )
+                payment = result.scalar_one_or_none()
+                
+                if payment:
+                    # Update payment status
+                    new_status = PaymentStatus.SUCCESS if status == 'SUCCESSFUL' else PaymentStatus.FAILED
+                    await db.execute(
+                        update(Payment)
+                        .where(Payment.id == payment.id)
+                        .values(
+                            status=new_status,
+                            gateway_response=payload,
+                            completed_at=datetime.utcnow() if new_status == PaymentStatus.SUCCESS else None,
+                            failure_reason=payload.get('reason') if new_status == PaymentStatus.FAILED else None
+                        )
+                    )
+                    await db.commit()
+                    
+                    logger.info(f"MTN Money payment updated: {payment.id} -> {new_status}")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"MTN Money webhook error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Webhook processing failed"
+        )
+
+
+# Admin endpoints
+@router.post("/refund", response_model=PaymentRefundResponse)
+async def create_payment_refund(
+    refund_request: PaymentRefundCreate,
+    admin_user: object = Depends(get_current_admin_user)
+):
+    """
+    Create a refund for a payment (admin only).
+    """
+    try:
+        result = await create_refund(
+            payment_id=refund_request.payment_id,
+            amount=refund_request.amount,
+            reason=refund_request.reason
+        )
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result.error_message or "Refund processing failed"
+            )
+        
+        return PaymentRefundResponse(
+            refund_id=result.transaction_id,
+            payment_id=refund_request.payment_id,
+            amount=refund_request.amount,
+            status=result.status.value,
+            reason=refund_request.reason
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Refund creation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Refund creation failed"
+        )
+
+
+@router.get("/admin/payments", response_model=PaginatedResponse[PaymentResponse])
+async def get_all_payments(
+    page: int = 1,
+    per_page: int = 20,
+    status: Optional[str] = None,
+    gateway: Optional[str] = None,
+    admin_user: object = Depends(get_current_admin_user)
+):
+    """
+    Get all payments (admin only).
+    """
+    try:
+        async with get_db_context() as db:
+            query = select(Payment)
+            
+            if status:
+                query = query.where(Payment.status == status)
+            
+            if gateway:
+                query = query.where(Payment.gateway == gateway)
+            
+            # Get total count
+            count_query = select(func.count()).select_from(query.subquery())
+            total = await db.execute(count_query)
+            total = total.scalar()
+            
+            # Get paginated results
+            payments = await db.execute(
+                query.options(selectinload(Payment.order))
+                .order_by(Payment.created_at.desc())
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+            )
+            payments = payments.scalars().all()
+            
+            return PaginatedResponse(
+                items=[PaymentResponse.from_orm(payment) for payment in payments],
+                total=total,
+                page=page,
+                per_page=per_page,
+                pages=(total + per_page - 1) // per_page
+            )
+            
+    except Exception as e:
+        logger.error(f"Failed to get payments: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve payments"

@@ -244,7 +244,7 @@ class AuthService:
                 update(UserSession)
                 .where(
                     UserSession.user_id == user_id,
-                    UserSession.session_token.startswith = session_token[:50],
+                    UserSession.session_token.startswith(session_token[:50]),
                     UserSession.is_active == True
                 )
                 .values(is_active=False)

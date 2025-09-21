@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmation de commande #{{ order.order_number }} - PromoWeb Africa{% endblock %}
+
+{% block content %}
+<div class="title">
+    🎉 Commande confirmée !
+</div>
+
+<div class="text">
+    Bonjour,<br><br>
+    
+    Merci pour votre commande ! Nous avons bien reçu votre commande <strong>#{{ order.order_number }}</strong> 
+    et nous la préparons avec soin.
+</div>
+
+<div class="order-summary">
+    <h3 style="margin-bottom: 15px; color: #2d3748;">Détails de votre commande</h3>
+    
+    <div class="order-item">
+        <span>Numéro de commande:</span>
+        <span><strong>{{ order.order_number }}</strong></span>
+    </div>
+    
+    <div class="order-item">
+        <span>Date de commande:</span>
+        <span>{{ order.created_at.strftime('%d/%m/%Y à %H:%M') }}</span>
+    </div>
+    
+    <div class="order-item">
+        <span>Status:</span>
+        <span style="color: #38a169; font-weight: 600;">{{ order.status | title }}</span>
+    </div>
+    
+    {% if order.estimated_delivery_date %}
+    <div class="order-item">
+        <span>Livraison estimée:</span>
+        <span>{{ order.estimated_delivery_date.strftime('%d/%m/%Y') }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Order Items -->
+{% if order.items %}
+<div style="margin: 30px 0;">
+    <h3 style="margin-bottom: 15px; color: #2d3748;">Articles commandés</h3>
+    
+    {% for item in order.items %}
+    <div style="border-bottom: 1px solid #e2e8f0; padding: 15px 0; display: flex; justify-content: space-between; align-items: center;">
+        <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 5px;">
+                {{ item.product_snapshot.title if item.product_snapshot else 'Produit' }}
+            </div>
+            <div style="color: #718096; font-size: 14px;">
+                Quantité: {{ item.quantity }}
+                {% if item.product_snapshot and item.product_snapshot.brand %}
+                | Marque: {{ item.product_snapshot.brand }}
+                {% endif %}
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div class="price">{{ "{:,.0f}".format(item.total_price) }} XAF</div>
+            <div style="color: #718096; font-size: 14px;">
+                {{ "{:,.0f}".format(item.unit_price) }} XAF/unité
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Order Totals -->
+<div class="order-summary">
+    <div class="order-item">
+        <span>Sous-total:</span>
+        <span>{{ "{:,.0f}".format(order.subtotal) }} XAF</span>
+    </div>
+    
+    {% if order.tax_amount > 0 %}
+    <div class="order-item">
+        <span>TVA (19,25%):</span>
+        <span>{{ "{:,.0f}".format(order.tax_amount) }} XAF</span>
+    </div>
+    {% endif %}
+    
+    {% if order.shipping_cost > 0 %}
+    <div class="order-item">
+        <span>Livraison:</span>
+        <span>{{ "{:,.0f}".format(order.shipping_cost) }} XAF</span>
+    </div>
+    {% else %}
+    <div class="order-item">
+        <span>Livraison:</span>
+        <span style="color: #38a169;">GRATUITE</span>
+    </div>
+    {% endif %}
+    
+    {% if order.discount_amount > 0 %}
+    <div class="order-item">
+        <span>Remise:</span>
+        <span style="color: #e53e3e;">-{{ "{:,.0f}".format(order.discount_amount) }} XAF</span>
+    </div>
+    {% endif %}
+    
+    <div class="order-item">
+        <span><strong>TOTAL:</strong></span>
+        <span class="price" style="font-size: 20px;">{{ "{:,.0f}".format(order.total_amount) }} XAF</span>
+    </div>
+</div>
+
+<!-- Shipping Address -->
+{% if order.shipping_address_snapshot %}
+<div style="margin: 30px 0;">
+    <h3 style="margin-bottom: 15px; color: #2d3748;">Adresse de livraison</h3>
+    <div style="background-color: #f7fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div><strong>{{ order.shipping_address_snapshot.name }}</strong></div>
+        {% if order.shipping_address_snapshot.phone %}
+        <div>{{ order.shipping_address_snapshot.phone }}</div>
+        {% endif %}
+        <div>{{ order.shipping_address_snapshot.address_line_1 }}</div>
+        {% if order.shipping_address_snapshot.address_line_2 %}
+        <div>{{ order.shipping_address_snapshot.address_line_2 }}</div>
+        {% endif %}
+        <div>
+            {{ order.shipping_address_snapshot.city }}
+            {% if order.shipping_address_snapshot.postal_code %}
+            {{ order.shipping_address_snapshot.postal_code }}
+            {% endif %}
+        </div>
+        <div>{{ order.shipping_address_snapshot.country | default('Cameroun') }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Next Steps -->
+<div style="background-color: #ebf8ff; border: 1px solid #90cdf4; border-radius: 8px; padding: 20px; margin: 30px 0;">
+    <h3 style="color: #2b6cb0; margin-bottom: 15px;">Prochaines étapes</h3>
+    <ul style="color: #2c5282; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Nous préparons votre commande dans notre entrepôt</li>
+        <li style="margin-bottom: 8px;">Vous recevrez un email de confirmation d'expédition avec le numéro de suivi</li>
+        <li style="margin-bottom: 8px;">Votre commande sera livrée à l'adresse indiquée</li>
+        <li>Un SMS vous sera envoyé avant la livraison</li>
+    </ul>
+</div>
+
+<!-- CTA Button -->
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ order_url | default(site_url + '/orders/' + order.id) }}" class="button">
+        Suivre ma commande
+    </a>
+</div>
+
+<div class="text">
+    Si vous avez des questions concernant votre commande, n'hésitez pas à nous contacter à 
+    <a href="mailto:{{ support_email | default('support@promoweb.africa') }}" style="color: #667eea;">
+        {{ support_email | default('support@promoweb.africa') }}
+    </a> 
+    ou par téléphone au +237 6XX XX XX XX.
+</div>
+
+<div class="text">
+    Merci de votre confiance et à bientôt sur PromoWeb Africa ! 🛍️
+</div>
+{% endblock %}

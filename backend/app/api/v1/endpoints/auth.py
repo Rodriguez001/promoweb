@@ -352,8 +352,8 @@ async def change_password(
 
 @router.post("/email/verify/request", response_model=BaseResponse)
 async def request_email_verification(
-    current_user: User = Depends(get_current_user),
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
 ):
     """
     Request email verification for current user.

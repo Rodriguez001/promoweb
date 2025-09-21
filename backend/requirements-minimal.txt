@@ -1,0 +1,32 @@
+# Minimal requirements for PromoWeb Africa Backend - No Rust compilation needed
+# Core FastAPI framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+starlette==0.27.0
+
+# Database essentials
+sqlalchemy==2.0.23
+psycopg2-binary>=2.9.10
+
+# Data validation (older version without Rust)
+pydantic==1.10.13
+email-validator==2.1.0
+
+# Authentication essentials
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# HTTP client
+httpx==0.25.2
+requests==2.31.0
+
+# Basic utilities
+python-dotenv==1.0.0
+python-slugify==8.0.1
+
+# Templates
+jinja2==3.1.2
+
+# Development
+pytest==7.4.3

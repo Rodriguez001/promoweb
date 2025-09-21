@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PromoWeb Africa{% endblock %}</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            text-decoration: none;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .tagline {
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 15px;
+        }
+        
+        .text {
+            font-size: 16px;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .order-summary {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .price {
+            color: #38a169;
+            font-weight: 600;
+        }
+        
+        .footer {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .footer-links {
+            margin: 20px 0;
+        }
+        
+        .footer-links a {
+            color: #90cdf4;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #90cdf4;
+            text-decoration: none;
+        }
+        
+        .contact-info {
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .footer {
+                padding: 20px;
+            }
+            
+            .footer-links a {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <a href="{{ site_url | default('https://promoweb.africa') }}" class="logo">
+                PromoWeb Africa
+            </a>
+            <div class="tagline">
+                Produits européens de qualité au Cameroun
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-links">
+                <a href="{{ site_url | default('https://promoweb.africa') }}">Accueil</a>
+                <a href="{{ site_url | default('https://promoweb.africa') }}/products">Catalogue</a>
+                <a href="{{ site_url | default('https://promoweb.africa') }}/contact">Contact</a>
+                <a href="{{ site_url | default('https://promoweb.africa') }}/help">Aide</a>
+            </div>
+            
+            <div class="social-links">
+                <a href="https://facebook.com/promowebafrica">Facebook</a>
+                <a href="https://instagram.com/promowebafrica">Instagram</a>
+                <a href="https://twitter.com/promowebafrica">Twitter</a>
+            </div>
+            
+            <div class="contact-info">
+                <p><strong>PromoWeb Africa</strong></p>
+                <p>Douala, Cameroun</p>
+                <p>Téléphone: +237 6XX XX XX XX</p>
+                <p>Email: {{ support_email | default('support@promoweb.africa') }}</p>
+            </div>
+            
+            <div style="margin-top: 20px; font-size: 12px; color: #a0aec0;">
+                <p>Vous recevez cet email car vous avez un compte chez PromoWeb Africa.</p>
+                <p>© {{ current_year | default('2024') }} PromoWeb Africa. Tous droits réservés.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
