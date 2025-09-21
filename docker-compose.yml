@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  # PostgreSQL avec PostGIS
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: promoweb_postgres
+    environment:
+      POSTGRES_DB: promoweb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+      - ./database:/docker-entrypoint-initdb.d
+    networks:
+      - promoweb_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d promoweb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis pour cache et sessions
+  redis:
+    image: redis:7-alpine
+    container_name: promoweb_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - promoweb_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin pour administration de la base de données
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: promoweb_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@promoweb.cm
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - promoweb_network
+    depends_on:
+      - postgres
+
+  # Backend FastAPI
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: promoweb_backend
+    environment:
+      - DATABASE_URL=postgresql://promoweb:password_2024@postgres:5432/promoweb
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - SECRET_KEY=your-secret-key-change-in-production
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    networks:
+      - promoweb_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: promoweb_frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-nextauth-secret-change-in-production
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - promoweb_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    command: npm run dev
+
+  # Celery Worker pour les tâches asynchrones
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: promoweb_celery_worker
+    environment:
+      - DATABASE_URL=postgresql://promoweb:password_2024@postgres:5432/promoweb
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    networks:
+      - promoweb_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A app.core.celery worker --loglevel=info
+
+  # Celery Beat pour les tâches planifiées
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: promoweb_celery_beat
+    environment:
+      - DATABASE_URL=postgresql://promoweb:password_2024@postgres:5432/promoweb
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    networks:
+      - promoweb_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A app.core.celery beat --loglevel=info
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  promoweb_network:
+    driver: bridge
