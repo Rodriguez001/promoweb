@@ -4,10 +4,13 @@ Pydantic models for product data validation and serialization.
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING, ForwardRef
 from pydantic import BaseModel, Field, validator, HttpUrl
 from decimal import Decimal
 from enum import Enum
+
+# Import pour éviter les erreurs de référence circulaire
+import app.schemas.promotion
 
 
 # Enums
@@ -164,7 +167,7 @@ class ProductDetail(ProductResponse):
     related_products: List[ProductResponse] = []
     average_rating: Optional[float] = None
     review_count: int = 0
-    promotions: List["PromotionResponse"] = []
+    promotions: List["app.schemas.promotion.PromotionResponse"] = []
 
 
 class ProductListResponse(BaseModel):
@@ -313,7 +316,7 @@ class ProductBulkUpdate(BaseModel):
 class ProductBulkPriceUpdate(BaseModel):
     """Schema for bulk price updates."""
     product_ids: List[str] = Field(..., min_items=1)
-    price_adjustment_type: str = Field(..., regex=r"^(percentage|fixed)$")
+    price_adjustment_type: str = Field(..., pattern=r"^(percentage|fixed)$")
     price_adjustment_value: Decimal = Field(..., gt=0)
     
     @validator('price_adjustment_value')
@@ -333,7 +336,7 @@ class ProductImport(BaseModel):
 
 class ProductExport(BaseModel):
     """Schema for product export configuration."""
-    format: str = Field(default="csv", regex=r"^(csv|xlsx|json)$")
+    format: str = Field(default="csv", pattern=r"^(csv|xlsx|json)$")
     include_inventory: bool = Field(default=True)
     include_reviews: bool = Field(default=False)
     category_ids: Optional[List[str]] = None

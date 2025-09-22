@@ -1,7 +1,7 @@
 """Add exchange rate table
 
 Revision ID: 003_add_exchange_rate_table
-Revises: 002_shipping_analytics_tables
+Revises: 002_shipping_analytics
 Create Date: 2024-09-21 17:47:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '003_add_exchange_rate_table'
-down_revision = '002_shipping_analytics_tables'
+down_revision = '002_shipping_analytics'
 branch_labels = None
 depends_on = None
 

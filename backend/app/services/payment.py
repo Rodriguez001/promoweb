@@ -227,9 +227,9 @@ class MobileMoneyProcessor:
     
     def __init__(self):
         self.orange_api_url = settings.ORANGE_MONEY_API_URL
-        self.orange_api_key = settings.ORANGE_MONEY_API_KEY
-        self.mtn_api_url = settings.MTN_MONEY_API_URL
-        self.mtn_api_key = settings.MTN_MONEY_API_KEY
+        self.orange_api_key = settings.ORANGE_MONEY_MERCHANT_KEY
+        self.mtn_api_url = settings.MTN_MOMO_API_URL
+        self.mtn_api_key = settings.MTN_MOMO_API_KEY
     
     async def initiate_orange_money_payment(self, payment_request: PaymentRequest) -> PaymentResult:
         """Initiate Orange Money payment."""

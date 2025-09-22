@@ -8,8 +8,95 @@ import logging
 from typing import Any, Dict, Optional, Union, List
 from datetime import timedelta
 
-import aioredis
-from aioredis import Redis
+# Conditionally import aioredis if available
+try:
+    import aioredis
+    from aioredis import Redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    # Mock Redis for development
+    REDIS_AVAILABLE = False
+    
+    class MockRedis:
+        """Mock Redis implementation for development"""
+        
+        def __init__(self, *args, **kwargs):
+            self.data = {}
+            self.expirations = {}
+            
+        async def ping(self):
+            return True
+            
+        async def info(self):
+            return {"redis_version": "mock", "used_memory_human": "0B", 
+                    "used_memory_peak_human": "0B", "connected_clients": 1, 
+                    "uptime_in_seconds": 0}
+            
+        async def get(self, key):
+            return self.data.get(key)
+            
+        async def set(self, key, value, ex=None, nx=False, xx=False):
+            if nx and key in self.data:
+                return False
+            if xx and key not in self.data:
+                return False
+            self.data[key] = value
+            if ex:
+                self.expirations[key] = ex
+            return True
+            
+        async def delete(self, *keys):
+            count = 0
+            for key in keys:
+                if key in self.data:
+                    del self.data[key]
+                    count += 1
+            return count
+            
+        async def exists(self, key):
+            return key in self.data
+            
+        async def expire(self, key, ttl):
+            if key in self.data:
+                self.expirations[key] = ttl
+                return True
+            return False
+            
+        async def ttl(self, key):
+            if key not in self.data:
+                return -2
+            return self.expirations.get(key, -1)
+            
+        async def incr(self, key, amount=1):
+            if key not in self.data:
+                self.data[key] = "0"
+            self.data[key] = str(int(self.data[key]) + amount)
+            return int(self.data[key])
+            
+        async def decr(self, key, amount=1):
+            return await self.incr(key, -amount)
+            
+        async def mget(self, keys):
+            return [self.data.get(key) for key in keys]
+            
+        async def mset(self, mapping):
+            for key, value in mapping.items():
+                self.data[key] = value
+            return True
+            
+        async def scan_iter(self, match=None):
+            import re
+            pattern = re.compile(match.replace("*", ".*"))
+            for key in self.data.keys():
+                if pattern.match(key):
+                    yield key
+                    
+        async def close(self):
+            self.data = {}
+            self.expirations = {}
+    
+    # Mock Redis class
+    Redis = MockRedis
 
 from app.core.config import get_settings
 
@@ -25,24 +112,34 @@ async def init_redis() -> None:
     global redis_client
     
     try:
-        redis_client = aioredis.from_url(
-            settings.REDIS_URL,
-            encoding="utf-8",
-            decode_responses=True,
-            max_connections=20,
-            retry_on_timeout=True,
-            socket_keepalive=True,
-            socket_keepalive_options={},
-            health_check_interval=30,
-        )
-        
-        # Test connection
-        await redis_client.ping()
-        logger.info("✅ Redis connection established")
+        if REDIS_AVAILABLE:
+            redis_client = aioredis.from_url(
+                settings.REDIS_URL,
+                encoding="utf-8",
+                decode_responses=True,
+                max_connections=20,
+                retry_on_timeout=True,
+                socket_keepalive=True,
+                socket_keepalive_options={},
+                health_check_interval=30,
+            )
+            
+            # Test connection
+            await redis_client.ping()
+            logger.info("✅ Redis connection established")
+        else:
+            # Use mock Redis for development
+            redis_client = Redis()
+            logger.warning("⚠️ Using mock Redis for development (aioredis not installed)")
         
     except Exception as e:
         logger.error(f"❌ Failed to connect to Redis: {e}")
-        raise
+        if not REDIS_AVAILABLE:
+            # Use mock Redis as fallback
+            redis_client = Redis()
+            logger.warning("⚠️ Using mock Redis as fallback due to connection error")
+        else:
+            raise
 
 
 async def close_redis() -> None:
@@ -101,8 +198,19 @@ class RedisCache:
     
     def __init__(self, client: Redis = None):
         self.client = client or redis_client
+        self._initialized = bool(self.client)
+    
+    async def _ensure_client(self):
+        """Ensure Redis client is initialized."""
+        global redis_client
         if not self.client:
-            raise RuntimeError("Redis client not initialized")
+            if not redis_client:
+                # Create a mock Redis client if needed
+                self.client = Redis()
+                logger.warning("⚠️ Using mock Redis client as fallback")
+            else:
+                self.client = redis_client
+            self._initialized = True
     
     async def get(self, key: str) -> Optional[Any]:
         """
@@ -115,6 +223,7 @@ class RedisCache:
             Cached value or None if not found
         """
         try:
+            await self._ensure_client()
             value = await self.client.get(key)
             if value is None:
                 return None
@@ -151,6 +260,8 @@ class RedisCache:
             True if set successfully
         """
         try:
+            await self._ensure_client()
+            
             # Serialize value if it's not a string
             if not isinstance(value, (str, int, float)):
                 value = json.dumps(value, default=str)
@@ -178,6 +289,7 @@ class RedisCache:
             Number of keys deleted
         """
         try:
+            await self._ensure_client()
             if not keys:
                 return 0
             return await self.client.delete(*keys)
@@ -196,6 +308,7 @@ class RedisCache:
             True if key exists
         """
         try:
+            await self._ensure_client()
             return bool(await self.client.exists(key))
         except Exception as e:
             logger.error(f"Error checking cache key {key}: {e}")
@@ -213,6 +326,7 @@ class RedisCache:
             True if expiration set successfully
         """
         try:
+            await self._ensure_client()
             return bool(await self.client.expire(key, ttl))
         except Exception as e:
             logger.error(f"Error setting expiration for key {key}: {e}")
@@ -229,6 +343,7 @@ class RedisCache:
             Time to live in seconds (-1 if no expiration, -2 if key doesn't exist)
         """
         try:
+            await self._ensure_client()
             return await self.client.ttl(key)
         except Exception as e:
             logger.error(f"Error getting TTL for key {key}: {e}")
@@ -246,6 +361,7 @@ class RedisCache:
             New value after increment
         """
         try:
+            await self._ensure_client()
             return await self.client.incr(key, amount)
         except Exception as e:
             logger.error(f"Error incrementing key {key}: {e}")
@@ -263,6 +379,7 @@ class RedisCache:
             New value after decrement
         """
         try:
+            await self._ensure_client()
             return await self.client.decr(key, amount)
         except Exception as e:
             logger.error(f"Error decrementing key {key}: {e}")
@@ -279,6 +396,7 @@ class RedisCache:
             List of values (None for missing keys)
         """
         try:
+            await self._ensure_client()
             values = await self.client.mget(keys)
             result = []
             
@@ -309,6 +427,7 @@ class RedisCache:
             True if all values set successfully
         """
         try:
+            await self._ensure_client()
             # Serialize values
             serialized = {}
             for key, value in mapping.items():
@@ -342,6 +461,7 @@ class RedisCache:
             Number of keys deleted
         """
         try:
+            await self._ensure_client()
             keys = []
             async for key in self.client.scan_iter(match=pattern):
                 keys.append(key)

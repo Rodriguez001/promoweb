@@ -152,7 +152,7 @@ class SMSService:
                 "config": {
                     "account_sid": settings.TWILIO_ACCOUNT_SID,
                     "auth_token": settings.TWILIO_AUTH_TOKEN,
-                    "from_number": settings.TWILIO_FROM_NUMBER
+                    "from_number": settings.TWILIO_PHONE_NUMBER
                 }
             })
         

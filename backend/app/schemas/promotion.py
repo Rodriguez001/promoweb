@@ -24,7 +24,7 @@ class PromotionBase(BaseModel):
     """Base promotion schema."""
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    code: Optional[str] = Field(None, min_length=3, max_length=50, regex=r"^[A-Z0-9_-]+$")
+    code: Optional[str] = Field(None, min_length=3, max_length=50, pattern=r"^[A-Z0-9_-]+$")
     type: PromotionType
     discount_value: Decimal = Field(..., ge=0)
     min_order_amount: Optional[Decimal] = Field(None, ge=0)
@@ -277,7 +277,7 @@ class PromotionPerformance(BaseModel):
 class CouponGenerationRequest(BaseModel):
     """Request to generate coupon codes."""
     count: int = Field(..., ge=1, le=1000)
-    prefix: Optional[str] = Field(None, max_length=10, regex=r"^[A-Z0-9]+$")
+    prefix: Optional[str] = Field(None, max_length=10, pattern=r"^[A-Z0-9]+$")
     length: int = Field(default=8, ge=4, le=20)
     promotion_template: PromotionCreate
 

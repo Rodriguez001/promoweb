@@ -7,10 +7,10 @@ const withPWA = require('next-pwa')({
 })
 
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  output: 'standalone',
+  // experimental: {
+  //   appDir: true, // No longer needed in Next.js 14
+  // },
+  // output: 'standalone', // Disabled for development
   images: {
     remotePatterns: [
       {

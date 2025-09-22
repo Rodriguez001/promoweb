@@ -501,9 +501,9 @@ async def get_payment(
         )
 
 
-@router.post("/", response_model=PaymentIntent, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PaymentIntentResponse, status_code=status.HTTP_201_CREATED)
 async def create_payment(
-    payment_data: PaymentCreate,
+    payment_data: PaymentCreateRequest,
     current_user: object = Depends(get_current_user),
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
@@ -832,7 +832,7 @@ async def process_payment_gateway(
     payment: Payment, 
     gateway: PaymentGateway, 
     background_tasks: BackgroundTasks
-) -> PaymentIntent:
+) -> PaymentIntentResponse:
     """Process payment through specified gateway."""
     
     if gateway == PaymentGateway.STRIPE:
@@ -850,12 +850,12 @@ async def process_payment_gateway(
         )
 
 
-async def process_stripe_payment(payment: Payment) -> PaymentIntent:
+async def process_stripe_payment(payment: Payment) -> PaymentIntentResponse:
     """Process Stripe payment."""
     # This would integrate with Stripe API
     # For demo purposes, return mock payment intent
     
-    return PaymentIntent(
+    return PaymentIntentResponse(
         payment_id=str(payment.id),
         client_secret="pi_mock_client_secret",
         expires_at=datetime.utcnow() + timedelta(hours=1),
@@ -863,7 +863,7 @@ async def process_stripe_payment(payment: Payment) -> PaymentIntent:
     )
 
 
-async def process_orange_money_payment(payment: Payment) -> PaymentIntent:
+async def process_orange_money_payment(payment: Payment) -> PaymentIntentResponse:
     """Process Orange Money payment."""
     # This would integrate with Orange Money API
     
@@ -873,7 +873,7 @@ async def process_orange_money_payment(payment: Payment) -> PaymentIntent:
             detail="Phone number required for Orange Money payment"
         )
     
-    return PaymentIntent(
+    return PaymentIntentResponse(
         payment_id=str(payment.id),
         redirect_url=f"https://api.orange.com/orange-money-webpay/cm/v1/webpayment?token=mock_token",
         instructions=f"Complete payment on your Orange Money account ({payment.customer_phone})",
@@ -881,7 +881,7 @@ async def process_orange_money_payment(payment: Payment) -> PaymentIntent:
     )
 
 
-async def process_mtn_momo_payment(payment: Payment) -> PaymentIntent:
+async def process_mtn_momo_payment(payment: Payment) -> PaymentIntentResponse:
     """Process MTN Mobile Money payment."""
     # This would integrate with MTN Mobile Money API
     
@@ -891,19 +891,19 @@ async def process_mtn_momo_payment(payment: Payment) -> PaymentIntent:
             detail="Phone number required for MTN Mobile Money payment"
         )
     
-    return PaymentIntent(
+    return PaymentIntentResponse(
         payment_id=str(payment.id),
         instructions=f"You will receive an MTN Mobile Money prompt on {payment.customer_phone}. Enter your PIN to complete the payment.",
         expires_at=datetime.utcnow() + timedelta(minutes=10)
     )
 
 
-async def process_cash_on_delivery(payment: Payment) -> PaymentIntent:
+async def process_cash_on_delivery(payment: Payment) -> PaymentIntentResponse:
     """Process Cash on Delivery."""
     # Update payment status to pending (will be confirmed on delivery)
     payment.update_status('pending', gateway_response={"method": "cash_on_delivery"})
     
-    return PaymentIntent(
+    return PaymentIntentResponse(
         payment_id=str(payment.id),
         instructions="Payment will be collected upon delivery. Please prepare the exact amount.",
         expires_at=datetime.utcnow() + timedelta(days=7)

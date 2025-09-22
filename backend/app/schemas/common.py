@@ -99,13 +99,13 @@ class PaginatedResponse(GenericModel, Generic[T]):
 class SortOrder(BaseModel):
     """Sort order specification."""
     field: str
-    direction: str = Field(default="asc", regex=r"^(asc|desc)$")
+    direction: str = Field(default="asc", pattern=r"^(asc|desc)$")
 
 
 class FilterCondition(BaseModel):
     """Filter condition."""
     field: str
-    operator: str = Field(..., regex=r"^(eq|ne|gt|ge|lt|le|in|nin|like|ilike)$")
+    operator: str = Field(..., pattern=r"^(eq|ne|gt|ge|lt|le|in|nin|like|ilike)$")
     value: Any
 
 
@@ -360,7 +360,7 @@ class StatisticsGroup(BaseModel):
 # Export/Import schemas
 class ExportRequest(BaseModel):
     """Data export request."""
-    format: str = Field(..., regex=r"^(csv|xlsx|json|pdf)$")
+    format: str = Field(..., pattern=r"^(csv|xlsx|json|pdf)$")
     filters: Dict[str, Any] = Field(default_factory=dict)
     fields: Optional[List[str]] = None
     email_delivery: bool = False
@@ -383,7 +383,7 @@ class ExportStatus(BaseModel):
 class ImportRequest(BaseModel):
     """Data import request."""
     file_url: str
-    format: str = Field(..., regex=r"^(csv|xlsx|json)$")
+    format: str = Field(..., pattern=r"^(csv|xlsx|json)$")
     mapping: Dict[str, str] = Field(default_factory=dict)  # field mapping
     options: Dict[str, Any] = Field(default_factory=dict)
     validate_only: bool = False

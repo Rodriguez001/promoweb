@@ -26,7 +26,6 @@ if DATABASE_URL.startswith("postgresql://"):
 # Create async engine
 async_engine = create_async_engine(
     DATABASE_URL,
-    poolclass=QueuePool,
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_pre_ping=True,
@@ -110,15 +109,14 @@ async def create_db_and_tables() -> None:
     try:
         # Import all models to ensure they are registered with Base
         from app.models import (  # noqa: F401
-            user,
-            product,
-            category,
-            cart,
-            order,
-            payment,
-            shipping,
-            promotion,
-            analytics,
+            User, UserAddress, UserSession, UserPreference,
+            Category, Product, Inventory, ProductReview,
+            Cart, CartItem, SavedItem,
+            Order, OrderItem, OrderStatusHistory,
+            Payment, PaymentRefund, PaymentWebhook, PaymentMethod, PaymentTransaction, ExchangeRate,
+            Shipping, ShippingTrackingEvent, ShippingZone, Carrier, DeliveryAttempt, ShippingLabel,
+            Promotion, CategoryPromotion, PromotionUsage, FlashSale, FlashSaleItem,
+            SearchAnalytic, ProductView, CartAbandonmentEvent, ConversionFunnel, PerformanceMetric, ABTest, ABTestParticipant
         )
         
         logger.info("Creating database tables...")
@@ -127,6 +125,55 @@ async def create_db_and_tables() -> None:
             # Enable PostGIS extension if not exists
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"))
+            
+            # Create ENUM types if they don't exist
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE user_role AS ENUM ('customer', 'admin', 'super_admin');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
+            
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE payment_status AS ENUM ('initiated', 'processing', 'pending', 'success', 'failed', 'expired', 'refunded');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
+            
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE payment_gateway AS ENUM ('stripe', 'orange_money', 'mtn_mobile_money', 'cash_on_delivery');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
+            
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE order_status AS ENUM ('pending', 'partially_paid', 'processing', 'shipped', 'in_transit', 'delivered', 'delivery_failed', 'paid_full', 'completed', 'cancelled', 'returned', 'refunded');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
+            
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE shipping_status AS ENUM ('pending', 'preparing', 'shipped', 'in_transit', 'delivered', 'failed', 'returned');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
+            
+            await conn.execute(text("""
+                DO $$ BEGIN
+                    CREATE TYPE promotion_type AS ENUM ('percentage', 'fixed_amount', 'free_shipping', 'buy_one_get_one');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """))
             
             # Create all tables
             await conn.run_sync(Base.metadata.create_all)

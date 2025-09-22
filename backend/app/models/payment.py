@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from decimal import Decimal
 from sqlalchemy import (
-    Column, String, Boolean, DateTime, ForeignKey, Numeric, Text, Index
+    Column, String, Boolean, DateTime, ForeignKey, Numeric, Text, Index, Integer
 )
 from sqlalchemy.dialects.postgresql import UUID, ENUM, JSON
 from sqlalchemy.orm import relationship, validates

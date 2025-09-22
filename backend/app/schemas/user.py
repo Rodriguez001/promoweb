@@ -122,26 +122,26 @@ class UserAddressResponse(UserAddressBase):
 # Preference schemas
 class UserPreferenceBase(BaseModel):
     """Base preference schema."""
-    language: str = Field(default="fr", regex=r"^(fr|en)$")
-    currency: str = Field(default="XAF", regex=r"^(XAF|EUR)$")
+    language: str = Field(default="fr", pattern=r"^(fr|en)$")
+    currency: str = Field(default="XAF", pattern=r"^(XAF|EUR)$")
     timezone: str = Field(default="Africa/Douala")
     email_notifications: bool = Field(default=True)
     sms_notifications: bool = Field(default=True)
     marketing_emails: bool = Field(default=False)
     items_per_page: int = Field(default=20, ge=10, le=100)
-    theme: str = Field(default="light", regex=r"^(light|dark|auto)$")
+    theme: str = Field(default="light", pattern=r"^(light|dark|auto)$")
 
 
 class UserPreferenceUpdate(BaseModel):
     """Schema for updating user preferences."""
-    language: Optional[str] = Field(None, regex=r"^(fr|en)$")
-    currency: Optional[str] = Field(None, regex=r"^(XAF|EUR)$")
+    language: Optional[str] = Field(None, pattern=r"^(fr|en)$")
+    currency: Optional[str] = Field(None, pattern=r"^(XAF|EUR)$")
     timezone: Optional[str] = None
     email_notifications: Optional[bool] = None
     sms_notifications: Optional[bool] = None
     marketing_emails: Optional[bool] = None
     items_per_page: Optional[int] = Field(None, ge=10, le=100)
-    theme: Optional[str] = Field(None, regex=r"^(light|dark|auto)$")
+    theme: Optional[str] = Field(None, pattern=r"^(light|dark|auto)$")
 
 
 class UserPreferenceResponse(UserPreferenceBase):

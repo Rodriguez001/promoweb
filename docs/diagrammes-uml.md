@@ -243,21 +243,21 @@ classDiagram
     }
     
     %% Relations
-    User ||--o{ Order : places
-    User ||--|| Cart : has
+    User "1" o-- "0..*" Order : places
+    User "1" -- "1" Cart : has
     Admin --|> User : extends
     
-    Product ||--o{ CartItem : contains
-    Product ||--o{ OrderItem : contains
-    Product }o--|| Category : belongs_to
-    Product ||--o{ Inventory : has
+    Product "1" o-- "0..*" CartItem : contains
+    Product "1" o-- "0..*" OrderItem : contains
+    Product "0..*" o-- "1" Category : belongs_to
+    Product "1" o-- "1" Inventory : has
     
-    Cart ||--o{ CartItem : contains
-    Order ||--o{ OrderItem : contains
-    Order ||--o{ Payment : has
-    Order ||--|| Shipping : has
+    Cart "1" o-- "0..*" CartItem : contains
+    Order "1" o-- "0..*" OrderItem : contains
+    Order "1" o-- "0..*" Payment : has
+    Order "1" -- "1" Shipping : has
     
-    Promotion }o--o{ Product : applies_to
+    Promotion "0..*" o-- "0..*" Product : applies_to
 ```
 
 ## 3. 📋 Diagrammes de Séquences
@@ -308,7 +308,7 @@ sequenceDiagram
     participant Cron as Cron Job
     participant A as API (FastAPI)
     participant GM as Google Merchant
-    parameter FX as Forex API
+    participant FX as Forex API
     participant DB as PostgreSQL
     participant Cache as Redis
     

@@ -4,10 +4,15 @@ Pydantic models for order and payment data validation.
 """
 
 from datetime import datetime, date
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field, validator, EmailStr
 from decimal import Decimal
 from enum import Enum
+
+# Import pour éviter les erreurs de référence circulaire
+if TYPE_CHECKING:
+    from app.schemas.payment import PaymentResponse
+    from app.schemas.shipping import ShippingResponse
 
 
 # Enums
@@ -153,8 +158,8 @@ class OrderResponse(OrderBase):
 class OrderDetail(OrderResponse):
     """Detailed order information."""
     items: List[OrderItemResponse] = []
-    payments: List["PaymentResponse"] = []
-    shipping: Optional["ShippingResponse"] = None
+    payments: List[Dict[str, Any]] = []  # Simplified to avoid circular imports
+    shipping: Optional[Dict[str, Any]] = None  # Simplified to avoid circular imports
     status_history: List["OrderStatusHistoryResponse"] = []
     user_name: str
     user_email: str
@@ -317,7 +322,7 @@ class OrderSearchQuery(BaseModel):
     page: int = Field(default=1, ge=1, description="Page number")
     per_page: int = Field(default=20, ge=1, le=100, description="Items per page")
     sort_by: str = Field(default="created_at", description="Sort field")
-    sort_order: str = Field(default="desc", regex=r"^(asc|desc)$", description="Sort order")
+    sort_order: str = Field(default="desc", pattern=r"^(asc|desc)$", description="Sort order")
 
 
 # Bulk operations
@@ -330,12 +335,12 @@ class OrderBulkStatusUpdate(BaseModel):
 
 class OrderExport(BaseModel):
     """Schema for order export configuration."""
-    format: str = Field(default="csv", regex=r"^(csv|xlsx|json)$")
+    format: str = Field(default="csv", pattern=r"^(csv|xlsx|json)$")
     filters: OrderReportFilters
     include_items: bool = Field(default=True)
     include_payments: bool = Field(default=True)
     include_shipping: bool = Field(default=False)
 
 
-# Forward references
-OrderDetail.model_rebuild()
+# Forward references - Removed model_rebuild() to avoid circular import issues
+# OrderDetail.model_rebuild()

@@ -22,3 +22,4 @@ email-validator>=2.0.0
 python-multipart>=0.0.6
 geoalchemy2>=0.14.1
 shapely>=2.0.1
+stripe>=12.5.1

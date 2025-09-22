@@ -333,7 +333,7 @@ class CustomReportQuery(BaseModel):
     date_to: Optional[date] = None
     period: AnalyticsPeriod = Field(default=AnalyticsPeriod.DAILY)
     limit: int = Field(default=100, ge=1, le=10000)
-    format: str = Field(default="json", regex=r"^(json|csv|xlsx)$")
+    format: str = Field(default="json", pattern=r"^(json|csv|xlsx)$")
 
 
 class CustomReportResponse(BaseModel):
@@ -396,7 +396,7 @@ class RealTimeMetrics(BaseModel):
 class AnalyticsExportRequest(BaseModel):
     """Analytics export request."""
     report_type: str
-    format: str = Field(default="csv", regex=r"^(csv|xlsx|json|pdf)$")
+    format: str = Field(default="csv", pattern=r"^(csv|xlsx|json|pdf)$")
     query_params: Dict[str, Any]
     email_delivery: bool = Field(default=False)
     recipient_email: Optional[str] = None

@@ -1,5 +1,4 @@
-// @ts-nocheck - Bypassing React 18/19 type conflicts with Heroicons
-'use client'
+// @ts-nocheck - Bypassing React 18/19 type conflicts with Radix UI components
 
 import { useState } from 'react'
 import Link from 'next/link'
