@@ -1,4 +1,4 @@
-// @ts-nocheck - Bypassing React 18/19 type conflicts with Radix UI components, PhoneIcon, ClockIcon, GlobeAltIcon
+// @ts-nocheck 
 import { TruckIcon, CreditCardIcon, ShieldCheckIcon, PhoneIcon, ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 
 const features = [

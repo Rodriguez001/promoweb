@@ -1,18 +1,14 @@
-// @ts-nocheck - Bypassing React type conflicts with Radix UI
+// @ts-nocheck - Bypassing React 18/19 JSX type conflicts for Radix Tabs usage
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 import { cn } from "@/lib/utils"
 
-// Use direct assignment to bypass type conflicts completely
 const Tabs = TabsPrimitive.Root
 
-// Define explicit interfaces to avoid type conflicts
 interface TabsListProps {
   className?: string;
   children?: React.ReactNode;
 }
-
-// Create wrapper components that use explicit div/button elements
 const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, children, ...props }, ref) => {
     return (

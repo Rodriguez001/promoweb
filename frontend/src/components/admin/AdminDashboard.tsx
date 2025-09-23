@@ -1,4 +1,4 @@
-// @ts-nocheck - Bypassing React type conflicts with Radix UI components
+// @ts-nocheck - Bypassing React 18/19 type conflicts with Radix UI Tabs and Select during build
 /**
  * AdminDashboard - Main admin interface for PromoWeb Africa
  * Provides overview of orders, products, and analytics

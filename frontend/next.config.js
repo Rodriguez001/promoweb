@@ -36,7 +36,7 @@ const nextConfig = {
   },
   eslint: {
     // ESLint is run in GitHub Actions
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
 }
 

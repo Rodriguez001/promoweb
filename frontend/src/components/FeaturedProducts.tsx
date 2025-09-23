@@ -1,5 +1,4 @@
-// @ts-nocheck - Bypassing React 18/19 type conflicts with Radix UI components
-
+// @ts-nocheck - Bypassing React 18/19 JSX type conflicts with @heroicons/react components
 import { useState } from 'react'
 import Link from 'next/link'
 import { StarIcon, HeartIcon, ShoppingCartIcon } from '@heroicons/react/24/solid'

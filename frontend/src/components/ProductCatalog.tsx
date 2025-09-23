@@ -3,7 +3,7 @@
  * Handles product display, filtering, pagination, and search
  */
 
-// @ts-nocheck - Bypassing React 18/19 type conflicts with Radix UI components
+// @ts-nocheck 
 'use client';
 
 import React, { useState, useEffect } from 'react';
